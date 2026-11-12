@@ -29,11 +29,11 @@ def _envf(name, default):
         return default
 
 
-TAU = _envf("M_TAU", 15.0)          # momentum decay scale (hours)
-SIGMA0 = _envf("M_SIGMA0", 1.6)     # rank uncertainty now
-SIGMA_G = _envf("M_SIGMA_G", 0.06)  # rank uncertainty growth per hour
-UNNAMED_KEEP = _envf("M_KEEP", 0.94)  # share of each place left unnamed
-SPREAD = _envf("M_SPREAD", 1.6)     # softmax spread over rank ordering
+TAU = _envf("M_TAU", 2.0)           # momentum decay scale (hours)
+SIGMA0 = _envf("M_SIGMA0", 1.3)     # rank uncertainty now
+SIGMA_G = _envf("M_SIGMA_G", 0.045) # rank uncertainty growth per hour
+UNNAMED_KEEP = _envf("M_KEEP", 0.78)  # share of each place left unnamed
+SPREAD = _envf("M_SPREAD", 1.4)     # softmax spread over rank ordering
 
 
 def parse_iso(s):
@@ -251,13 +251,15 @@ def main():
         row = sorted(agg[k].items(), key=lambda kv: (-kv[1], kv[0]))
         total = 0.0
         for u, p in row[:MAX_PLACES_ROWS]:
+            # floor to 6 decimals and never let a place's sum exceed 1
+            p = math.floor(p * 1e6) / 1e6
             if total + p > 1.0:
-                p = max(0.0, 1.0 - total)
+                p = math.floor(max(0.0, 1.0 - total) * 1e6) / 1e6
             if p <= 0:
                 break
-            probabilities.append({"universe_id": int(u), "place": k, "p": round(p, 6)})
+            probabilities.append({"universe_id": int(u), "place": k, "p": p})
             total += p
-            if total >= 0.999:
+            if total >= 1.0 - 1e-9:
                 break
 
     # top10: best mean predicted rank over the window, ties by uid
